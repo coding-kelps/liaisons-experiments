@@ -1,20 +1,13 @@
 from langchain_community.llms import Ollama
 import re
 from enum import Enum
-import pandas as pd
 import polars as pl
+import pandas as pd
 from tqdm import tqdm
 import logging
 from sklearn.metrics import confusion_matrix, f1_score
 import numpy as np
 from dataclasses import dataclass
-
-@dataclass
-class Results:
-    labels: list[str]
-    cm: pl.DataFrame
-    f1_scores: pl.DataFrame
-    data: pl.DataFrame
 
 class Experiment:
     class RelationType(Enum):
@@ -27,7 +20,6 @@ class Experiment:
         def get_labels() -> list[str]:
             pass
 
-    
     class BinaryRelationType(RelationType):
         SUPPORT = "support"
         ATTACK = "attack"
@@ -82,17 +74,12 @@ class Experiment:
             super().__init__("Unexpected LLM response value", response)
     
 
-    def __init__(self, model: str, output_dir: str = ".", relation_dim: str = "binary"):
+    def __init__(self, model: str, output_dir: str = ".", tqdm = tqdm):
         self.llm = Ollama(
             model=model
         )
         self.output_dir = output_dir
-
-        if relation_dim == "binary":
-            self.relation_dim = Experiment.BinaryRelationType
-        else:
-            self.relation_dim = Experiment.TernaryRelationType
-
+        self.tqdm = tqdm
     
     def __predict_relation(self, arg_1: str, arg_2: str) -> RelationType:
         prompt = f"""
@@ -107,44 +94,67 @@ class Experiment:
 
         return self.relation_dim.from_response(response)
         
-    def run_from_df(self, df: pl.DataFrame) -> tuple[np.ndarray, list[str]]:
+    def run_from_df(self, df: pl.DataFrame, relation_dim: str = "binary") -> pl.DataFrame:
+        if relation_dim == "binary":
+            self.relation_dim = Experiment.BinaryRelationType
+        else:
+            self.relation_dim = Experiment.TernaryRelationType
+
         # Iterates through the rows to make LLM predict each argument pair relation
         predictions: list[Experiment.RelationType] = []
-        for row in tqdm(df.to_numpy(), desc="predicted_relation"):
+        for row in self.tqdm(df[["argument_a", "argument_b"]].to_numpy(), desc=f"predict argument relation - model={self.llm.model} relation_dimension={relation_dim}"):
             # Make at least 5 attempts to predict relation as LLM
             # could fail to follow template
             for attempt in range(5):
                 try:
                     prediction = self.__predict_relation(row[0], row[1])
                 except Experiment.LLMResponseError as e:
-                    logging.warning(f"attempt={attempt} {e}")
+                    logging.warning(f"attempt={attempt} model={self.llm.model} relation_dimension={relation_dim} msg={e}")
                     continue
                 else:
                     predictions.append(prediction.value)
                     break
             else:
-                raise Exception("LLM failed to predict relation after 5 attempts")
+                logging.error(f"model={self.llm.model} relation_dimension={relation_dim} msg=LLM failed to follow prediction response template after 5 attempts")
 
-        # Add the prediction back to the DataFrame and convert it as a Pandas DataFrame
-        results = df.with_columns(pl.Series("predicted_relation", predictions)).to_pandas()
+        # Add the prediction back to the DataFrame and return it
+        return df.with_columns(pl.Series("predicted_relation", predictions))
     
-        # Create and return the confusion matrix plus its labels
-        labels = self.relation_dim.get_labels()
-        cm = confusion_matrix(results['relation'], results['predicted_relation'], labels=labels)
-        cm_df = pl.from_pandas(pd.DataFrame(cm, index=labels, columns=labels))
-        f1_scores = f1_score(results['relation'], results['predicted_relation'], labels=labels, average=None)
-        f1_scores_df = pl.from_pandas(pd.DataFrame(f1_scores, index=labels))
-
-        return Results(labels, cm_df, f1_scores_df, results)
-
-    def run_from_csv(self, input_file: str) -> tuple[np.ndarray, list[str]]:
+    def run_from_csv(self, input_file: str, relation_dim: str = "binary") -> pl.DataFrame:
         # Load .csv input file into DataFrame
         df = pl.read_csv(input_file)
 
-        return self.run_from_df(df)
+        return self.run_from_df(df, relation_dim)
     
-    def run_from_json(self, input_file: str) -> tuple[np.ndarray, list[str]]:
+    def run_from_json(self, input_file: str, relation_dim: str = "binary") -> pl.DataFrame:
         # Load .json input file into DataFrame
         df = pl.read_json(input_file)
 
-        return self.run_from_df(df)
+        return self.run_from_df(df, relation_dim)
+    
+    @dataclass
+    class Benchmarks:
+        confusion_matrix: pd.DataFrame
+        f1_scores: pd.DataFrame
+
+    def compute_benchmarks(self, results: pl.DataFrame) -> Benchmarks:
+        # Retrieve labels from relation dimension
+        labels = self.relation_dim.get_labels()
+
+        # Compute confusion matrix
+        cm = confusion_matrix(results['relation'], results['predicted_relation'], labels=labels)
+
+        # Compute F1 scores for each prediction class
+        f1_scores = f1_score(results['relation'], results['predicted_relation'], labels=labels, average=None)
+
+        # Flip each F1 score as a column and convert it as a Pandas dataframe to enhance readability
+        f1_scores_df = pd.DataFrame(np.split(f1_scores, True), index=[self.llm.model], columns=labels)
+
+        # Add Macro F1 score as a separate column
+        f1_scores_df = f1_scores_df.assign(macro=f1_scores_df.mean(axis=1))
+
+        return Experiment.Benchmarks(
+            # converted as a Pandas dataframe to enhance readability
+            confusion_matrix=pd.DataFrame(cm, index=labels, columns=labels),
+            f1_scores=f1_scores_df,
+        )
