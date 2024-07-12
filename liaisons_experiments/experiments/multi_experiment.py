@@ -7,13 +7,14 @@ import polars as pl
 @dataclass
 class ExperimentConfig:
     model: str
+    endpoint: str
 
 class MultiExperiment:
     def __init__(self, configs: list[ExperimentConfig], output_dir: str = ".", tqdm = tqdm):
         self.experiments: list[Experiment] = []
 
         for config in configs:
-            self.experiments.append(Experiment(config.model, output_dir, tqdm))
+            self.experiments.append(Experiment(config.model, config.endpoint, output_dir, tqdm))
     
     @dataclass
     class Benchmarks:

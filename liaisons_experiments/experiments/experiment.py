@@ -74,9 +74,10 @@ class Experiment:
             super().__init__("Unexpected LLM response value", response)
     
 
-    def __init__(self, model: str, output_dir: str = ".", tqdm = tqdm):
+    def __init__(self, model: str, endpoint: str = "http://localhost:11434", output_dir: str = ".", tqdm = tqdm):
         self.llm = Ollama(
-            model=model
+            model=model,
+            base_url=endpoint,
         )
         self.output_dir = output_dir
         self.tqdm = tqdm
