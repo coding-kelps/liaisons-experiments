@@ -12,9 +12,6 @@ from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import GoogleGenerativeAI
 from typing import Callable
 
-# DEBUG
-import random
-
 class Experiment:
     class RelationType(Enum):
         def from_response(response: str):
@@ -122,27 +119,20 @@ class Experiment:
         # Iterates through the rows to make LLM predict each argument pair relation
         predictions: list[Experiment.RelationType] = []
         for i, row in enumerate(self.tqdm(df[["argument_a", "argument_b"]].to_numpy(), desc=f"Predict Argument Relation - client={self.client} model={self.model_name} relation_dimension={relation_dim}")):
-
-            # DEBUG
-            if random.randint(0,2):
-                predictions.append(self.relation_dim.SUPPORT.value)
+            # Make at least 5 attempts to predict relation as LLM
+            # could fail to follow template
+            for attempt in range(5):
+                try:
+                    prediction = self.__predict_relation(row[0], row[1], prompt_formater)
+                except Experiment.LLMResponseError as e:
+                    logging.debug(f"client={self.client} model={self.llm.model} relation_dimension={relation_dim} arg_pair_id={i} attempt={attempt} msg={e}")
+                    continue
+                else:
+                    predictions.append(prediction.value)
+                    break
             else:
                 predictions.append("prediction_failed")
-
-            # # Make at least 5 attempts to predict relation as LLM
-            # # could fail to follow template
-            # for attempt in range(5):
-            #     try:
-            #         prediction = self.__predict_relation(row[0], row[1], prompt_formater)
-            #     except Experiment.LLMResponseError as e:
-            #         logging.debug(f"client={self.client} model={self.llm.model} relation_dimension={relation_dim} arg_pair_id={i} attempt={attempt} msg={e}")
-            #         continue
-            #     else:
-            #         predictions.append(prediction.value)
-            #         break
-            # else:
-            #     predictions.append("prediction_failed")
-            #     logging.error(f"client={self.client} model={self.model_name} relation_dimension={relation_dim} arg_pair_id={i} msg=LLM failed to follow prediction response template after 5 attempts")
+                logging.error(f"client={self.client} model={self.model_name} relation_dimension={relation_dim} arg_pair_id={i} msg=LLM failed to follow prediction response template after 5 attempts")
 
         # Add the prediction back to the DataFrame and return it
         df["predicted_relation"] = predictions
