@@ -163,3 +163,5 @@ cython_debug/
 
 # Ignored development directory
 .dev/
+# Please don't ask why
+main.py
