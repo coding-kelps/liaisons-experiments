@@ -4,6 +4,7 @@ from tqdm import tqdm
 import pandas as pd
 from typing import Callable
 from datetime import datetime
+import os
 
 class MultiExperiment:
     def __init__(self, llms: list, output_dir: str = ".", tqdm = tqdm):
@@ -19,7 +20,12 @@ class MultiExperiment:
         metadata: pd.DataFrame
     
     def run_from_csv(self, input_file: str, prompt_formater: Callable[[str, str, list[str]], str], relation_dim: str = "binary") -> Benchmarks:
+        # Create output directories if none
         str_date = datetime.today().strftime("%Y %m %d")
+        full_output_dir = f"{self.output_dir}/results/{str_date}/"
+
+        if not os.path.exists(full_output_dir):
+            os.makedirs(full_output_dir)
 
         # Load .csv input file into DataFrame
         df = pd.read_csv(input_file)
@@ -35,7 +41,7 @@ class MultiExperiment:
             benchmarks.metadata = pd.concat([benchmarks.metadata, exp_benchmarks.metadata], axis=0)
 
             # Gradually save benchmarks to file
-            benchmarks.f1_scores.to_csv(f"{self.output_dir}/results/{str_date}/{relation_dim}_benchmarks_f1_score.csv")
-            benchmarks.metadata.to_csv(f"{self.output_dir}/results/{str_date}/{relation_dim}_benchmarks_metadata.csv")
+            benchmarks.f1_scores.to_csv(f"{full_output_dir}/{relation_dim}_benchmarks_f1_score.csv")
+            benchmarks.metadata.to_csv(f"{full_output_dir}/{relation_dim}_benchmarks_metadata.csv")
 
         return benchmarks
