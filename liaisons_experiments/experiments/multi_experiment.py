@@ -9,6 +9,7 @@ import os
 class MultiExperiment:
     def __init__(self, llms: list, output_dir: str = ".", tqdm = tqdm):
         self.experiments: list[Experiment] = []
+        self.output_dir = output_dir
 
         for llm in llms:
             self.experiments.append(Experiment(llm, output_dir, tqdm))
@@ -21,7 +22,7 @@ class MultiExperiment:
     
     def run_from_csv(self, input_file: str, prompt_formater: Callable[[str, str, list[str]], str], relation_dim: str = "binary") -> Benchmarks:
         # Create output directories if none
-        str_date = datetime.today().strftime("%Y %m %d")
+        str_date = datetime.today().strftime("%Y-%m-%d")
         full_output_dir = f"{self.output_dir}/results/{str_date}/"
 
         if not os.path.exists(full_output_dir):
