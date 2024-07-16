@@ -125,7 +125,7 @@ class Experiment:
                 try:
                     prediction = self.__predict_relation(row[0], row[1], prompt_formater)
                 except Experiment.LLMResponseError as e:
-                    logging.debug(f"client={self.client} model={self.llm.model} relation_dimension={relation_dim} arg_pair_id={i} attempt={attempt} msg={e}")
+                    logging.debug(f"client={self.client} model={self.model_name} relation_dimension={relation_dim} arg_pair_id={i} attempt={attempt} msg={e}")
                     continue
                 else:
                     predictions.append(prediction.value)
