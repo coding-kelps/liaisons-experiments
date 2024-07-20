@@ -98,8 +98,8 @@ class Experiment:
             self.client = "unknown"
             self.model_name = "unknown"
     
-    def __predict_relation(self, arg_1: str, arg_2: str, prompt_formater: Callable[[str, str], str]) -> RelationType:
-        prompt = prompt_formater(arg_1, arg_2)
+    def __predict_relation(self, parent_argument: str, child_argument: str, prompt_formater: Callable[[str, str], str]) -> RelationType:
+        prompt = prompt_formater(parent_argument, child_argument)
 
         response = self.llm.invoke(prompt)
 
@@ -118,7 +118,7 @@ class Experiment:
 
         # Iterates through the rows to make LLM predict each argument pair relation
         predictions: list[Experiment.RelationType] = []
-        for i, row in enumerate(self.tqdm(df[["argument_a", "argument_b"]].to_numpy(), desc=f"Predict Argument Relation - client={self.client} model={self.model_name} relation_dimension={relation_dim}")):
+        for i, row in enumerate(self.tqdm(df[["parent_argument", "child_argument"]].to_numpy(), desc=f"Predict Argument Relation - client={self.client} model={self.model_name} relation_dimension={relation_dim}")):
             # Make at least 5 attempts to predict relation as LLM
             # could fail to follow template
             for attempt in range(5):
@@ -161,25 +161,23 @@ class Experiment:
         # Retrieve labels from relation dimension
         labels = self.relation_dim.get_labels()
 
-        # Remove failed prediction from results
-        clean_results = results[results["predicted_relation"] != "prediction_failed"]
-
         metadata = pd.DataFrame({
             # Compute the prediction failing rate over the number of prediction
-            "fail_rate": [results[results["predicted_relation"] == "prediction_failed"].shape[0] / results.shape[0]]
+            "fail_rate": [results[results["predicted_relation"] == "prediction_failed"].shape[0] / results.shape[0]],
+            "model_name": [self.model_name],
         })
 
         # Compute confusion matrix
-        cm = confusion_matrix(clean_results['relation'], clean_results['predicted_relation'], labels=labels)
+        cm = confusion_matrix(results['relation'], results['predicted_relation'], labels=labels)
 
         # Compute F1 scores for each prediction class
-        f1_scores = f1_score(clean_results['relation'], clean_results['predicted_relation'], labels=labels, average=None)
+        f1_scores = f1_score(results['relation'], results['predicted_relation'], labels=labels, average=None)
 
         # Flip each F1 score as a column and convert it as a Pandas dataframe to enhance readability
-        f1_scores_df = pd.DataFrame(np.split(f1_scores, True), index=[self.model_name], columns=labels)
+        f1_scores_df = pd.DataFrame(np.split(f1_scores, True), columns=labels)
 
         # Add Macro F1 score as a separate column
-        f1_scores_df = f1_scores_df.assign(macro=f1_scores_df.mean(axis=1))
+        f1_scores_df = f1_scores_df.assign(macro=f1_scores_df.mean(axis=1), model_name=self.model_name).reset_index(drop=True)
 
         return Experiment.Benchmarks(
             # converted as a Pandas dataframe to enhance readability
