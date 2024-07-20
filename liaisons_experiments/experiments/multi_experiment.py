@@ -19,17 +19,14 @@ class MultiExperiment:
         confusion_matrices: dict[str, pd.DataFrame]
         f1_scores: pd.DataFrame
         metadata: pd.DataFrame
-    
-    def run_from_csv(self, input_file: str, prompt_formater: Callable[[str, str, list[str]], str], relation_dim: str = "binary") -> Benchmarks:
+
+    def run_from_df(self, df: pd.DataFrame, prompt_formater: Callable[[str, str, list[str]], str], relation_dim: str = "binary") -> Benchmarks:
         # Create output directories if none
         str_date = datetime.today().strftime("%Y-%m-%d")
         full_output_dir = f"{self.output_dir}/results/{str_date}/"
 
         if not os.path.exists(full_output_dir):
             os.makedirs(full_output_dir)
-
-        # Load .csv input file into DataFrame
-        df = pd.read_csv(input_file)
 
         benchmarks = MultiExperiment.Benchmarks({}, pd.DataFrame(), pd.DataFrame())
 
@@ -46,3 +43,9 @@ class MultiExperiment:
             benchmarks.metadata.to_csv(f"{full_output_dir}/{relation_dim}_benchmarks_metadata.csv")
 
         return benchmarks
+    
+    def run_from_csv(self, input_file: str, prompt_formater: Callable[[str, str, list[str]], str], relation_dim: str = "binary") -> Benchmarks:
+        # Load .csv input file into DataFrame
+        df = pd.read_csv(input_file)
+
+        return self.run_from_df(df, prompt_formater, relation_dim)
