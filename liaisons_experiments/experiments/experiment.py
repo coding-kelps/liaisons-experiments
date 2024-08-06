@@ -139,17 +139,17 @@ class Experiment:
 
         return df
     
-    def run_from_csv(self, input_file: str, prompt_formater: Callable[[str, str], str], relation_dim: str = "binary") -> pd.DataFrame:
+    def run_from_csv(self, input_file: str, **kwargs) -> pd.DataFrame:
         # Load .csv input file into DataFrame
         df = pd.read_csv(input_file)
 
-        return self.run_from_df(df, prompt_formater, relation_dim)
+        return self.run_from_df(df, **kwargs)
     
-    def run_from_json(self, input_file: str, prompt_formater: Callable[[str, str], str], relation_dim: str = "binary") -> pd.DataFrame:
+    def run_from_json(self, input_file: str, **kwargs) -> pd.DataFrame:
         # Load .json input file into DataFrame
         df = pd.read_json(input_file)
 
-        return self.run_from_df(df, prompt_formater, relation_dim)
+        return self.run_from_df(df, **kwargs)
     
     @dataclass
     class Benchmarks:
