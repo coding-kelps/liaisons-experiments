@@ -48,8 +48,8 @@ class MultiExperiment:
 
         return benchmarks
 
-    def run_from_csv(self, input_file: str, prompt_formater: Callable[[str, str, list[str]], str], relation_dim: str = "binary") -> Benchmarks:
+    def run_from_csv(self, input_file: str, **kwargs) -> Benchmarks:
         # Load .csv input file into DataFrame
         df = pd.read_csv(input_file)
 
-        return self.run_from_df(df, prompt_formater, relation_dim)
+        return self.run_from_df(df, **kwargs)
