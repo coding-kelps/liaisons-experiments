@@ -1,20 +1,25 @@
 from .experiment import Experiment
 from dataclasses import dataclass
-from tqdm import tqdm
 import pandas as pd
 from typing import Callable
 from datetime import datetime
+from names_generator import generate_name
+import logging
 import os
 
 class MultiExperiment:
-    def __init__(self, llms: list, output_dir: str = ".", number_threads: int = 1, tqdm = tqdm):
-        self.experiments: list[Experiment] = []
+    def __init__(self, exps: list, name: str | None = None, input_name: bool = False, output_dir: str = ".", **kwargs):
+        if not name and not input_name:
+            self.name = generate_name()
+            logging.info(f"created multi-experiments object with name: {self.name}")
+        elif not name:
+            self.name = input()
+        else:
+            self.name = name
+        
+        self.experiments: list[Experiment] = list(map(lambda exp: Experiment(exp[0], **{**kwargs, **exp[1]}), exps))
         self.output_dir = output_dir
-        self.number_threads = number_threads
 
-        for llm in llms:
-            self.experiments.append(Experiment(llm, output_dir, number_threads, tqdm))
-    
     @dataclass
     class Benchmarks:
         confusion_matrices: dict[str, pd.DataFrame]
@@ -24,7 +29,7 @@ class MultiExperiment:
     def run_from_df(self, df: pd.DataFrame, prompt_formater: Callable[[str, str, list[str]], str], relation_dim: str = "binary") -> Benchmarks:
         # Create output directories if none
         str_date = datetime.today().strftime("%Y-%m-%d")
-        full_output_dir = f"{self.output_dir}/results/{str_date}/"
+        full_output_dir = f"{self.output_dir}/results/{str_date}/{self.name}"
 
         if not os.path.exists(full_output_dir):
             os.makedirs(full_output_dir)
@@ -44,7 +49,7 @@ class MultiExperiment:
             benchmarks.metadata.to_csv(f"{full_output_dir}/{relation_dim}_benchmarks_metadata.csv")
 
         return benchmarks
-    
+
     def run_from_csv(self, input_file: str, prompt_formater: Callable[[str, str, list[str]], str], relation_dim: str = "binary") -> Benchmarks:
         # Load .csv input file into DataFrame
         df = pd.read_csv(input_file)
