@@ -2,7 +2,6 @@ import re
 from enum import Enum
 import pandas as pd
 from tqdm import tqdm
-import logging
 from sklearn.metrics import confusion_matrix, f1_score
 import numpy as np
 from dataclasses import dataclass
@@ -11,6 +10,7 @@ from langchain_openai import ChatOpenAI
 from langchain_anthropic import ChatAnthropic
 from langchain_google_genai import GoogleGenerativeAI
 from typing import Callable
+import concurrent.futures
 
 class Experiment:
     class RelationType(Enum):
@@ -98,44 +98,41 @@ class Experiment:
             self.client = "unknown"
             self.model_name = "unknown"
     
-    def __predict_relation(self, parent_argument: str, child_argument: str, prompt_formater: Callable[[str, str], str]) -> RelationType:
+    def __predict_relation(self, parent_argument: str, child_argument: str, prompt_formater: Callable[[str, str], str], pbar: tqdm) -> str | None:
         prompt = prompt_formater(parent_argument, child_argument)
 
-        response = self.llm.invoke(prompt)
+        for _ in range(5):
+            try:
+                response = self.llm.invoke(prompt)
 
-        if isinstance(self.llm, GoogleGenerativeAI):
-            res_content = response
+                if isinstance(self.llm, GoogleGenerativeAI):
+                    res_content = response
+                else:
+                    res_content = response.content
+            
+                prediction = self.relation_dim.from_response(res_content)
+
+            except Experiment.LLMResponseError as _:
+                continue
+            else:
+                pbar.update(1)
+                return prediction.value
         else:
-            res_content = response.content
-
-        return self.relation_dim.from_response(res_content)
+            pbar.update(1)
+            return "prediction_failed"
         
-    def run_from_df(self, df: pd.DataFrame, prompt_formater: Callable[[str, str], str], relation_dim: str = "binary") -> pd.DataFrame:
+    def run_from_df(self, df: pd.DataFrame, prompt_formater: Callable[[str, str], str], relation_dim: str = "binary") -> pd.DataFrame:        
         if relation_dim == "binary":
             self.relation_dim = Experiment.BinaryRelationType
         else:
             self.relation_dim = Experiment.TernaryRelationType
 
-        # Iterates through the rows to make LLM predict each argument pair relation
-        predictions: list[Experiment.RelationType] = []
-        for i, row in enumerate(self.tqdm(df[["parent_argument", "child_argument"]].to_numpy(), desc=f"Predict Argument Relation - client={self.client} model={self.model_name} relation_dimension={relation_dim}")):
-            # Make at least 5 attempts to predict relation as LLM
-            # could fail to follow template
-            for attempt in range(5):
-                try:
-                    prediction = self.__predict_relation(row[0], row[1], prompt_formater)
-                except Experiment.LLMResponseError as e:
-                    logging.debug(f"client={self.client} model={self.model_name} relation_dimension={relation_dim} arg_pair_id={i} attempt={attempt} msg={e}")
-                    continue
-                else:
-                    predictions.append(prediction.value)
-                    break
-            else:
-                predictions.append("prediction_failed")
-                logging.error(f"client={self.client} model={self.model_name} relation_dimension={relation_dim} arg_pair_id={i} msg=LLM failed to follow prediction response template after 5 attempts")
 
-        # Add the prediction back to the DataFrame and return it
-        df["predicted_relation"] = predictions
+        arg_pairs = df[["parent_argument", "child_argument"]].to_numpy()
+
+        with self.tqdm(total=arg_pairs.shape[0], desc=f"Predict Argument Pair Relation", unit="pred", postfix={"model": self.model_name, "relation_dimension": relation_dim}) as pbar:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                df["predicted_relation"] = list(executor.map(lambda row: self.__predict_relation(row[0], row[1], prompt_formater, pbar), arg_pairs))
 
         return df
     
