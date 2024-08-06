@@ -8,15 +8,7 @@ import logging
 import os
 
 class MultiExperiment:
-    def __init__(self, exps: list, name: str | None = None, input_name: bool = False, output_dir: str = ".", **kwargs):
-        if not name and not input_name:
-            self.name = generate_name()
-            logging.info(f"created multi-experiments object with name: {self.name}")
-        elif not name:
-            self.name = input()
-        else:
-            self.name = name
-        
+    def __init__(self, exps: list, output_dir: str = ".", **kwargs):        
         self.experiments: list[Experiment] = list(map(lambda exp: Experiment(exp[0], **{**kwargs, **exp[1]}), exps))
         self.output_dir = output_dir
 
@@ -26,13 +18,19 @@ class MultiExperiment:
         f1_scores: pd.DataFrame
         metadata: pd.DataFrame
 
-    def run_from_df(self, df: pd.DataFrame, prompt_formater: Callable[[str, str, list[str]], str], relation_dim: str = "binary") -> Benchmarks:
+    def run_from_df(self, df: pd.DataFrame, prompt_formater: Callable[[str, str, list[str]], str], relation_dim: str = "binary", name: str | None = None, input_name: bool = False,) -> Benchmarks:
+        if not name and input_name:
+            name = input()
+        elif not name:
+            name = generate_name()
+
         # Create output directories if none
         str_date = datetime.today().strftime("%Y-%m-%d")
-        full_output_dir = f"{self.output_dir}/results/{str_date}/{self.name}"
+        full_output_dir = f"{self.output_dir}/results/{str_date}/{name}"
 
         if not os.path.exists(full_output_dir):
             os.makedirs(full_output_dir)
+            print(f"created multi-experiments output directory \"{name}\"")
 
         benchmarks = MultiExperiment.Benchmarks({}, pd.DataFrame(), pd.DataFrame())
 
