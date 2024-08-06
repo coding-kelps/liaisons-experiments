@@ -7,12 +7,13 @@ from datetime import datetime
 import os
 
 class MultiExperiment:
-    def __init__(self, llms: list, output_dir: str = ".", tqdm = tqdm):
+    def __init__(self, llms: list, output_dir: str = ".", number_threads: int = 1, tqdm = tqdm):
         self.experiments: list[Experiment] = []
         self.output_dir = output_dir
+        self.number_threads = number_threads
 
         for llm in llms:
-            self.experiments.append(Experiment(llm, output_dir, tqdm))
+            self.experiments.append(Experiment(llm, output_dir, number_threads, tqdm))
     
     @dataclass
     class Benchmarks:

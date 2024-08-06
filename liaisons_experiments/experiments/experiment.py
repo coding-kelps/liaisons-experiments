@@ -77,10 +77,11 @@ class Experiment:
             super().__init__("Unexpected LLM response value", response)
     
 
-    def __init__(self, llm, output_dir: str = ".", tqdm = tqdm):
+    def __init__(self, llm, output_dir: str = ".", number_threads: int = 1, tqdm = tqdm):
         self.llm = llm
         self.output_dir = output_dir
         self.tqdm = tqdm
+        self.number_threads = number_threads
 
         if isinstance(llm, ChatOpenAI):
             self.client = "openai"
@@ -131,7 +132,7 @@ class Experiment:
         arg_pairs = df[["parent_argument", "child_argument"]].to_numpy()
 
         with self.tqdm(total=arg_pairs.shape[0], desc=f"Predict Argument Pair Relation", unit="pred", postfix={"model": self.model_name, "relation_dimension": relation_dim}) as pbar:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self.number_threads) as executor:
                 df["predicted_relation"] = list(executor.map(lambda row: self.__predict_relation(row[0], row[1], prompt_formater, pbar), arg_pairs))
 
         return df
