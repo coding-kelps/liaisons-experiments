@@ -43,8 +43,8 @@ class MultiExperiment:
             benchmarks.metadata = pd.concat([benchmarks.metadata, exp_benchmarks.metadata], axis=0)
 
             # Gradually save benchmarks to file
-            benchmarks.f1_scores.to_csv(f"{full_output_dir}/{relation_dim}_benchmarks_f1_score.csv")
-            benchmarks.metadata.to_csv(f"{full_output_dir}/{relation_dim}_benchmarks_metadata.csv")
+            benchmarks.f1_scores.to_csv(f"{full_output_dir}/{relation_dim}_benchmarks_f1_score.csv", index=False)
+            benchmarks.metadata.to_csv(f"{full_output_dir}/{relation_dim}_benchmarks_metadata.csv", index=False)
 
         return benchmarks
 
