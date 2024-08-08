@@ -6,6 +6,8 @@
 
 The present repository proposes a benchmarking framework to easily evaluate LLMs' capacity to predict argument relations at the micro-scale level (only guessing the relation between pairs of arguments). The framework is intended to be used with a [preprocessed sample of a dataset from the IBM Debater project](https://huggingface.co/datasets/coding-kelps/liaisons-claim-stance-sample). The obtained results can be found [here](https://huggingface.co/datasets/coding-kelps/liaisons-experiments-results).
 
+## About Contributions
+
 As mentioned earlier, this work is part of an academic project for the validation of my Master's Degree at Heriot-Watt University, preventing me from accepting any contributions until the final release of my project. Thank you for your understanding.
 
 ## Associated Works
