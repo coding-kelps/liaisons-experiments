@@ -10,7 +10,7 @@ As mentioned earlier, this work is part of an academic project for the validatio
 
 ## Associated Works
 
-This work is part of a [collection of works](#associated-works) whose ultimate goal is to deliver a framework to automatically analyze social media content (e.g., X, Reddit) to extract their argumentative value and predict their relations, leveraging Large Language Models' (LLMs) abilities:
+This work is part of a collection of works whose ultimate goal is to deliver a framework to automatically analyze social media content (e.g., X, Reddit) to extract their argumentative value and predict their relations, leveraging Large Language Models' (LLMs) abilities:
 
 - [liaisons](https://github.com/coding-kelps/liaisons) (the developed client for social media content analysis)
 - [liaisons-preprocess](https://github.com/coding-kelps) (the preprocessing of the original IBM dataset)
