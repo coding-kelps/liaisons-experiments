@@ -15,7 +15,7 @@ As mentioned earlier, this work is part of an academic project for the validatio
 This work is part of a collection of works whose ultimate goal is to deliver a framework to automatically analyze social media content (e.g., X, Reddit) to extract their argumentative value and predict their relations, leveraging Large Language Models' (LLMs) abilities:
 
 - [liaisons](https://github.com/coding-kelps/liaisons) (the developed client for social media content analysis)
-- [liaisons-preprocess](https://github.com/coding-kelps) (the preprocessing of the original IBM dataset)
+- [liaisons-preprocess](https://github.com/coding-kelps/liaisons-preprocess) (the preprocessing of the original IBM dataset)
 - [liaisons-claim-stance-sample](https://huggingface.co/datasets/coding-kelps/liaisons-claim-stance-sample) (the preprocessed sample used with this benchmarking framework)
 - [liaisons-experiments-results](https://huggingface.co/datasets/coding-kelps/liaisons-experiments-results) (the obtained results with this benchmarking)
 - [mantis-shrimp](https://github.com/coding-kelps/mantis-shrimp) (the configuration-as-code used to set up my workstation for this project)
